@@ -21,21 +21,25 @@ const registerUser = asyncHandler(async (req, res) => {
 
     //check if user already exists
 
-    const existedUser = User.findOne({
-        $or: [
-            { username },
-            { email }
-        ]
+    const existing = await User.findOne({
+        $or: [{ username: username.toLowerCase() }, { email }]
     });
-    if(existedUser)
+
+    if(existing)
     {
-        throw new ApiError(409, "Username or email already exists");
+        throw new ApiError(400, "User already exists");
     }
+
 
     //check avatar and cover image
 
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0)
+    {
+        coverImageLocalPath = req.files.coverImage[0].path;
+    }
 
     if(!avatarLocalPath)
     {
@@ -65,7 +69,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     //remove password and refresh token from user object
 
-    const createdUser = User.findById(user._id).select("-password -refreshToken");
+    const createdUser = await User.findById(user._id).select("-password -refreshToken");
 
     if(!createdUser)
     {
